@@ -42,9 +42,11 @@ DEFAULT_CONFIG = {
 
 @st.cache_resource
 def init_firebase():
-    # cache_resource mencegah error "app already exists" saat Streamlit rerun
     if not firebase_admin._apps:
-        cred = credentials.Certificate(KEY_PATH)
+        if os.path.exists(KEY_PATH):
+            cred = credentials.Certificate(KEY_PATH)
+        else:
+            cred = credentials.Certificate(dict(st.secrets["firebase"]))
         firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
     return True
 
