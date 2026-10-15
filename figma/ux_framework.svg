@@ -1,0 +1,455 @@
+<svg width="1920" height="1200" viewBox="0 0 1920 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap');
+      text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; fill: #0F172A; }
+      .title-hero { font-size: 26px; font-weight: 800; fill: #0F172A; }
+      .sub-hero { font-size: 14px; fill: #475569; }
+      .section-badge { font-size: 11px; font-weight: 800; fill: #0D47A1; letter-spacing: 0.8px; text-transform: uppercase; }
+      .card-title { font-size: 16px; font-weight: 700; fill: #0F172A; }
+      .card-desc { font-size: 12px; fill: #475569; line-height: 1.4; }
+      .wireframe-label { font-size: 11px; font-weight: 600; fill: #64748B; }
+      .code-pill { font-size: 10.5px; font-family: monospace; font-weight: 700; }
+    </style>
+    <filter id="card-shadow" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.06"/>
+    </filter>
+    <filter id="accent-shadow" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#0D47A1" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="primary-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0D47A1"/>
+      <stop offset="1" stop-color="#1976D2"/>
+    </linearGradient>
+    <linearGradient id="header-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+    <pattern id="grid-dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#CBD5E1"/>
+    </pattern>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="1920" height="1200" fill="#F8FAFC"/>
+  <rect width="1920" height="1200" fill="url(#grid-dots)" opacity="0.65"/>
+
+  <!-- ==================== TOP HEADER / BANNER ==================== -->
+  <g id="UX_Header" transform="translate(60, 40)">
+    <rect width="1800" height="96" rx="20" fill="url(#header-grad)" stroke="#BFDBFE" stroke-width="1.5" filter="url(#card-shadow)"/>
+    
+    <rect x="28" y="24" width="48" height="48" rx="14" fill="#0D47A1"/>
+    <text x="52" y="55" fill="#FFFFFF" font-size="24" text-anchor="middle">📐</text>
+
+    <g transform="translate(92, 32)">
+      <rect x="0" y="0" width="180" height="20" rx="10" fill="#DBEAFE"/>
+      <text x="10" y="14" class="section-badge">KERANGKA DESAIN UX</text>
+      <text x="0" y="42" class="title-hero">UX Framework &amp; Information Architecture</text>
+    </g>
+
+    <g transform="translate(1420, 36)" text-anchor="end">
+      <text x="350" y="18" font-size="12" font-weight="700" fill="#0D47A1">Sistem Monitoring &amp; Otomasi Air IoT</text>
+      <text x="350" y="36" font-size="11" fill="#64748B">ESP32 • Firebase RTDB • Streamlit • Telegram Bot • Mamdani</text>
+    </g>
+  </g>
+
+  <!-- ==================== SECTION 1: ARSITEKTUR INFORMASI & USER FLOW ==================== -->
+  <g id="Section_User_Flow" transform="translate(60, 160)">
+    <rect width="1800" height="250" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+    
+    <!-- Title -->
+    <text x="32" y="38" class="card-title">1. User Flow &amp; Arsitektur Informasi (Navigasi Sistem)</text>
+    <text x="32" y="58" class="card-desc">Alur interaksi pengguna saat memantau air, menerima peringatan, dan mengendalikan pompa manual via bot Telegram.</text>
+    <line x1="32" y1="72" x2="1768" y2="72" stroke="#F1F5F9" stroke-width="1.5"/>
+
+    <!-- Flow Diagram Nodes -->
+    <!-- Node 1: Sensor & ESP32 -->
+    <g transform="translate(40, 96)">
+      <rect width="210" height="120" rx="14" fill="#F8FAFC" stroke="#90CAF9" stroke-width="1.5"/>
+      <rect x="16" y="16" width="32" height="32" rx="8" fill="#E3F2FD"/>
+      <text x="32" y="38" font-size="16" text-anchor="middle">📡</text>
+      <text x="58" y="32" font-size="12" font-weight="700" fill="#0D47A1">Hardware IoT</text>
+      <text x="58" y="46" font-size="10" fill="#64748B">ESP32 + 3 Sensor</text>
+      <text x="16" y="74" font-size="11" fill="#334155">• HC-SR04 (Level)</text>
+      <text x="16" y="92" font-size="11" fill="#334155">• Turbidity (Kekeruhan)</text>
+      <text x="16" y="110" font-size="11" fill="#334155">• YF-S201 (Flow Sensor)</text>
+    </g>
+
+    <!-- Arrow 1 -->
+    <g transform="translate(258, 146)">
+      <line x1="0" y1="0" x2="40" y2="0" stroke="#0D47A1" stroke-width="2" stroke-dasharray="4"/>
+      <polygon points="40,-4 48,0 40,4" fill="#0D47A1"/>
+      <text x="24" y="-8" font-size="9.5" font-weight="700" fill="#0D47A1" text-anchor="middle">WiFi RTDB</text>
+    </g>
+
+    <!-- Node 2: Firebase Cloud -->
+    <g transform="translate(316, 96)">
+      <rect width="210" height="120" rx="14" fill="#F8FAFC" stroke="#FFCC80" stroke-width="1.5"/>
+      <rect x="16" y="16" width="32" height="32" rx="8" fill="#FFF3E0"/>
+      <text x="32" y="38" font-size="16" text-anchor="middle">🔥</text>
+      <text x="58" y="32" font-size="12" font-weight="700" fill="#E65100">Firebase Cloud</text>
+      <text x="58" y="46" font-size="10" fill="#64748B">Sinkronisasi Realtime</text>
+      <text x="16" y="74" font-size="11" fill="#334155">• /sensor (Telemetri)</text>
+      <text x="16" y="92" font-size="11" fill="#334155">• /command (Pompa)</text>
+      <text x="16" y="110" font-size="11" fill="#334155">• /logs (Riwayat Transmisi)</text>
+    </g>
+
+    <!-- Arrow 2 -->
+    <g transform="translate(534, 146)">
+      <line x1="0" y1="0" x2="40" y2="0" stroke="#0D47A1" stroke-width="2"/>
+      <polygon points="40,-4 48,0 40,4" fill="#0D47A1"/>
+      <text x="24" y="-8" font-size="9.5" font-weight="700" fill="#0D47A1" text-anchor="middle">Stream API</text>
+    </g>
+
+    <!-- Node 3: Dashboard Web UX (Streamlit) -->
+    <g transform="translate(592, 96)">
+      <rect width="400" height="120" rx="14" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.5"/>
+      <rect x="16" y="16" width="32" height="32" rx="8" fill="#DCFCE7"/>
+      <text x="32" y="38" font-size="16" text-anchor="middle">💻</text>
+      <text x="58" y="32" font-size="12" font-weight="700" fill="#15803D">Frontend Dashboard Web</text>
+      <text x="58" y="46" font-size="10" fill="#64748B">3 Halaman Menu Intuitif (Streamlit)</text>
+      <g transform="translate(16, 64)">
+        <rect width="112" height="42" rx="8" fill="#FFFFFF" stroke="#86EFAC"/>
+        <text x="56" y="18" font-size="9.5" font-weight="700" fill="#15803D" text-anchor="middle">1. Dashboard</text>
+        <text x="56" y="32" font-size="8.5" fill="#64748B" text-anchor="middle">5 KPI + Tank Box</text>
+      </g>
+      <g transform="translate(140, 64)">
+        <rect width="112" height="42" rx="8" fill="#FFFFFF" stroke="#86EFAC"/>
+        <text x="56" y="18" font-size="9.5" font-weight="700" fill="#15803D" text-anchor="middle">2. Grafik &amp; Hist</text>
+        <text x="56" y="32" font-size="8.5" fill="#64748B" text-anchor="middle">Telemetri &amp; Kurva</text>
+      </g>
+      <g transform="translate(264, 64)">
+        <rect width="120" height="42" rx="8" fill="#FFFFFF" stroke="#86EFAC"/>
+        <text x="60" y="18" font-size="9.5" font-weight="700" fill="#15803D" text-anchor="middle">3. Riwayat Logs</text>
+        <text x="60" y="32" font-size="8.5" fill="#64748B" text-anchor="middle">Filter &amp; Transmisi</text>
+      </g>
+    </g>
+
+    <!-- Branch Arrows to Engine & Telegram -->
+    <g transform="translate(1000, 146)">
+      <line x1="0" y1="0" x2="40" y2="0" stroke="#0D47A1" stroke-width="2"/>
+      <polygon points="40,-4 48,0 40,4" fill="#0D47A1"/>
+      <text x="24" y="-8" font-size="9.5" font-weight="700" fill="#0D47A1" text-anchor="middle">Inferensi</text>
+    </g>
+
+    <!-- Node 4: Fuzzy Mamdani Engine -->
+    <g transform="translate(1058, 96)">
+      <rect width="320" height="120" rx="14" fill="#FDF4FF" stroke="#F0ABFC" stroke-width="1.5"/>
+      <rect x="16" y="16" width="32" height="32" rx="8" fill="#FAE8FF"/>
+      <text x="32" y="38" font-size="16" text-anchor="middle">🧠</text>
+      <text x="58" y="32" font-size="12" font-weight="700" fill="#A21CAF">Logika Fuzzy Mamdani</text>
+      <text x="58" y="46" font-size="10" fill="#64748B">Penentuan Daya Pengisian Otomatis</text>
+      <text x="16" y="74" font-size="10.5" fill="#4A044E">• Input: Level Air (%) &amp; Kekeruhan (NTU)</text>
+      <text x="16" y="92" font-size="10.5" fill="#4A044E">• Output: Modulasi PWM MOSFET (0 - 255)</text>
+      <text x="16" y="110" font-size="10.5" fill="#4A044E">• Proteksi Kekeruhan Darurat &gt; 100 NTU</text>
+    </g>
+
+    <!-- Arrow to Telegram -->
+    <g transform="translate(1386, 146)">
+      <line x1="0" y1="0" x2="40" y2="0" stroke="#0D47A1" stroke-width="2"/>
+      <polygon points="40,-4 48,0 40,4" fill="#0D47A1"/>
+      <text x="24" y="-8" font-size="9.5" font-weight="700" fill="#0D47A1" text-anchor="middle">Alert</text>
+    </g>
+
+    <!-- Node 5: Bot Telegram Interaction -->
+    <g transform="translate(1444, 96)">
+      <rect width="310" height="120" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+      <rect x="16" y="16" width="32" height="32" rx="8" fill="#DBEAFE"/>
+      <text x="32" y="38" font-size="16" text-anchor="middle">📱</text>
+      <text x="58" y="32" font-size="12" font-weight="700" fill="#1D4ED8">Telegram Bot Channel</text>
+      <text x="58" y="46" font-size="10" fill="#64748B">Asisten Interaktif Jarak Jauh</text>
+      <text x="16" y="74" font-size="10.5" fill="#1E3A8A">• Notifikasi otomatis: Bak Penuh / Keruh</text>
+      <text x="16" y="92" font-size="10.5" fill="#1E3A8A">• Perintah: /status, /on, /off, /menu</text>
+      <text x="16" y="110" font-size="10.5" fill="#1E3A8A">• Tombol Menu Bot Telegram bawaan</text>
+    </g>
+  </g>
+
+  <!-- ==================== SECTION 2: WIREFRAME SKELETON LAYOUT ==================== -->
+  <g id="Section_Wireframe" transform="translate(60, 435)">
+    <rect width="1120" height="725" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+    
+    <text x="32" y="38" class="card-title">2. Wireframe Antarmuka &amp; Hirarki Tata Letak (Mid-Fi Blueprint)</text>
+    <text x="32" y="58" class="card-desc">Kerangka visual penempatan komponen dashboard: Sidebar Navigasi, 5 Kartu Metrik seragam, dan Kontainer Bak Mandi.</text>
+    <line x1="32" y1="72" x2="1088" y2="72" stroke="#F1F5F9" stroke-width="1.5"/>
+
+    <!-- Wireframe Canvas Container (Scaled Mockup 1056 x 610) -->
+    <g transform="translate(32, 90)">
+      <rect width="1056" height="610" rx="14" fill="#D1E3F8" stroke="#94A3B8" stroke-width="1.5"/>
+
+      <!-- Blueprint Sidebar -->
+      <g transform="translate(0, 0)">
+        <rect width="240" height="610" fill="#BBDEFB" stroke="#90CAF9" stroke-width="1.5"/>
+        
+        <!-- Back Button -->
+        <rect x="16" y="16" width="76" height="26" rx="8" fill="#FFFFFF" stroke="#90CAF9"/>
+        <text x="24" y="33" font-size="10" font-weight="700" fill="#0D47A1">← Kembali</text>
+        <text x="100" y="33" class="wireframe-label">[Collapse Nav]</text>
+
+        <!-- Logo -->
+        <text x="120" y="70" font-size="24" text-anchor="middle">💧</text>
+        <text x="120" y="92" font-size="14" font-weight="800" fill="#000000" text-anchor="middle">Water Monitoring</text>
+        <line x1="16" y1="108" x2="224" y2="108" stroke="#90CAF9"/>
+
+        <!-- Radio Menu -->
+        <text x="16" y="128" font-size="11" font-weight="700" fill="#000000">Menu</text>
+        
+        <rect x="16" y="138" width="208" height="28" rx="6" fill="#FFFFFF" fill-opacity="0.6"/>
+        <circle cx="28" cy="152" r="5" fill="#0D47A1"/>
+        <text x="40" y="156" font-size="11" font-weight="700" fill="#000000">Dashboard Utama</text>
+
+        <circle cx="28" cy="182" r="5" fill="#FFFFFF" stroke="#94A3B8"/>
+        <text x="40" y="186" font-size="11" fill="#334155">Grafik dan Historis</text>
+
+        <circle cx="28" cy="210" r="5" fill="#FFFFFF" stroke="#94A3B8"/>
+        <text x="40" y="214" font-size="11" fill="#334155">Riwayat &amp; Notifikasi</text>
+        <line x1="16" y1="230" x2="224" y2="230" stroke="#90CAF9"/>
+
+        <!-- ESP32 Status Box -->
+        <rect x="16" y="242" width="208" height="54" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+        <rect x="16" y="242" width="4" height="54" rx="2" fill="#2E7D32"/>
+        <circle cx="28" cy="256" r="3.5" fill="#2E7D32"/>
+        <text x="36" y="259" font-size="10" font-weight="700" fill="#2E7D32">ESP32 TERHUBUNG</text>
+        <text x="24" y="274" font-size="9" fill="#000000">Waktu: 00:00:00</text>
+        <text x="24" y="287" font-size="8.5" fill="#64748B">IP: 10.207.82.29</text>
+
+        <!-- Checkbox Auto-refresh -->
+        <rect x="16" y="308" width="14" height="14" rx="3" fill="#1976D2"/>
+        <text x="36" y="319" font-size="10" font-weight="600" fill="#000000">Auto-Refresh Live Data</text>
+        <line x1="16" y1="332" x2="224" y2="332" stroke="#90CAF9"/>
+
+        <!-- Telegram Controls -->
+        <text x="16" y="350" font-size="11" font-weight="700" fill="#000000">📱 Telegram Bot</text>
+        <text x="16" y="372" font-size="9.5" fill="#000000">Notifikasi otomatis</text>
+        <rect x="176" y="362" width="36" height="16" rx="8" fill="#1976D2"/>
+        <circle cx="204" cy="370" r="6" fill="#FFFFFF"/>
+        
+        <text x="16" y="396" font-size="8.5" fill="#475569">Perintah: /status /on /off...</text>
+        <text x="16" y="410" font-size="8.5" fill="#475569">Penerima terdaftar: 1</text>
+        
+        <rect x="16" y="420" width="100" height="26" rx="13" fill="#1976D2"/>
+        <text x="66" y="437" font-size="9.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">Tes Telegram</text>
+      </g>
+
+      <!-- Blueprint Main Body -->
+      <g transform="translate(260, 20)">
+        <text x="0" y="24" font-size="18" font-weight="800" fill="#000000">Dashboard Monitoring Air</text>
+        <text x="220" y="24" class="wireframe-label">&lt;Halaman Utama&gt;</text>
+
+        <!-- Row 1: 5 Metric Cards (Uniform Height 84px) -->
+        <g transform="translate(0, 42)">
+          <!-- Card 1 -->
+          <g transform="translate(0, 0)">
+            <rect width="148" height="84" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+            <text x="10" y="18" font-size="8.5" font-weight="700" fill="#64748B">STATUS PWM</text>
+            <text x="10" y="46" font-size="15" font-weight="800" fill="#2E7D32">PWM 255</text>
+            <text x="10" y="68" font-size="8.5" fill="#475569">Duty: 100% (12V)</text>
+          </g>
+
+          <!-- Card 2 -->
+          <g transform="translate(158, 0)">
+            <rect width="148" height="84" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+            <text x="10" y="18" font-size="8.5" font-weight="700" fill="#64748B">STATUS KECEPATAN</text>
+            <text x="10" y="46" font-size="13" font-weight="800" fill="#2E7D32">CEPAT (100%)</text>
+            <text x="10" y="68" font-size="8.5" fill="#475569">Mode: Otonom</text>
+          </g>
+
+          <!-- Card 3 -->
+          <g transform="translate(316, 0)">
+            <rect width="148" height="84" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+            <text x="10" y="18" font-size="8.5" font-weight="700" fill="#64748B">KUALITAS AIR</text>
+            <text x="10" y="46" font-size="15" font-weight="800" fill="#2E7D32">8.5 NTU</text>
+            <text x="10" y="68" font-size="8.5" fill="#475569">Status: JERNIH</text>
+          </g>
+
+          <!-- Card 4 -->
+          <g transform="translate(474, 0)">
+            <rect width="148" height="84" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+            <text x="10" y="18" font-size="8.5" font-weight="700" fill="#64748B">DEBIT AIR MASUK</text>
+            <text x="10" y="46" font-size="15" font-weight="800" fill="#000000">0.0 L/min</text>
+            <text x="10" y="68" font-size="8.5" fill="#475569">Sensor YF-S201</text>
+          </g>
+
+          <!-- Card 5 -->
+          <g transform="translate(632, 0)">
+            <rect width="148" height="84" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+            <text x="10" y="18" font-size="8.5" font-weight="700" fill="#64748B">TOTAL AIR TERPAKAI</text>
+            <text x="10" y="46" font-size="15" font-weight="800" fill="#000000">0.0 Liter</text>
+            <text x="10" y="68" font-size="8.5" fill="#475569">Akumulasi Vol</text>
+          </g>
+        </g>
+
+        <!-- Row 2: Tank Container -->
+        <g transform="translate(0, 146)">
+          <rect width="780" height="240" rx="16" fill="#FFFFFF" stroke="#CBD5E1"/>
+          
+          <text x="390" y="32" font-size="14" font-weight="700" fill="#000000" text-anchor="middle">Ketinggian Bak Mandi</text>
+          
+          <!-- Big Level -->
+          <text x="390" y="96" font-size="44" font-weight="800" fill="#000000" text-anchor="middle">0%</text>
+          
+          <!-- Progress Bar -->
+          <rect x="90" y="122" width="600" height="14" rx="7" fill="#E1F5FE"/>
+          <rect x="90" y="122" width="8" height="14" rx="7" fill="#1976D2"/>
+
+          <text x="390" y="166" font-size="11" fill="#000000" text-anchor="middle">
+            Jarak Permukaan ke Sensor: <tspan font-weight="700">0.0 cm</tspan> (Tinggi Bak Acuan: 72 cm)
+          </text>
+          
+          <text x="390" y="190" font-size="9.5" fill="#64748B" font-style="italic" text-anchor="middle">
+            Diperbarui dari ESP32: 00:00:00
+          </text>
+        </g>
+
+        <!-- Component Hierarchy Annotation -->
+        <g transform="translate(0, 404)">
+          <rect width="780" height="145" rx="12" fill="#F1F5F9" stroke="#E2E8F0"/>
+          <text x="16" y="24" font-size="11" font-weight="700" fill="#0F172A">📌 Prinsip Hirarki UX (UX Architecture Best Practices):</text>
+          <text x="16" y="48" font-size="10.5" fill="#334155">• <b>Z-Pattern Scanning:</b> Pengguna membaca status daya &amp; kualitas di baris kartu metrik terlebih dahulu sebelum melihat detail volume bak.</text>
+          <text x="16" y="68" font-size="10.5" fill="#334155">• <b>Color Semantics:</b> Warna Hijau (#2E7D32) menandakan kondisi air aman &amp; pompa aktif normal; Merah (#C62828) memicu proteksi darurat.</text>
+          <text x="16" y="88" font-size="10.5" fill="#334155">• <b>Zero Cognitive Load:</b> Persentase besar (0-100%) dan visual progress bar memberi pemahaman instan tanpa perlu menghitung jarak cm.</text>
+          <text x="16" y="108" font-size="10.5" fill="#334155">• <b>Responsive CSS Grid:</b> Menggunakan auto-fit minmax(185px, 1fr) sehingga tinggi kartu tetap seragam pada layar laptop maupun HP.</text>
+          <text x="16" y="128" font-size="10.5" fill="#334155">• <b>Persistent Navigation:</b> Tombol collapse [← Kembali] dan breadcrumb kembali ke dashboard mencegah pengguna tersesat di subhalaman.</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== SECTION 3: TABEL STATE INTERAKSI & SISTEM DESAIN ==================== -->
+  <g id="Section_UX_States" transform="translate(1210, 435)">
+    <!-- Card 1: Mamdani State Machine Table -->
+    <g transform="translate(0, 0)">
+      <rect width="650" height="420" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+      <text x="28" y="36" class="card-title">3. State Machine &amp; Respon Inferensi Fuzzy</text>
+      <text x="28" y="56" class="card-desc">Kondisi sensor, respon motor pompa via MOSFET, dan feedback antarmuka.</text>
+      <line x1="28" y1="70" x2="622" y2="70" stroke="#F1F5F9" stroke-width="1.5"/>
+
+      <!-- Table Header -->
+      <g transform="translate(28, 86)">
+        <rect width="594" height="28" rx="6" fill="#F1F5F9"/>
+        <text x="12" y="18" font-size="10" font-weight="700" fill="#475569">KONDISI AIR</text>
+        <text x="130" y="18" font-size="10" font-weight="700" fill="#475569">MODULASI PWM</text>
+        <text x="260" y="18" font-size="10" font-weight="700" fill="#475569">LABEL UX</text>
+        <text x="390" y="18" font-size="10" font-weight="700" fill="#475569">RESPON SISTEM</text>
+      </g>
+
+      <!-- Row 1: Kosong -->
+      <g transform="translate(28, 122)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#0F172A">Level &le; 20%</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#2E7D32">PWM 255 (12V)</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#DCFCE7"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#15803D" text-anchor="middle">CEPAT (100%)</text>
+        <text x="390" y="20" font-size="10" fill="#475569">Pengisian daya penuh</text>
+        <line x1="0" y1="32" x2="594" y2="32" stroke="#F1F5F9"/>
+      </g>
+
+      <!-- Row 2: Sedang -->
+      <g transform="translate(28, 162)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#0F172A">Level 21% - 60%</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#0288D1">PWM 175 (~8.2V)</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#E0F2FE"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#0369A1" text-anchor="middle">SEDANG (~68%)</text>
+        <text x="390" y="20" font-size="10" fill="#475569">Debit stabil terjaga</text>
+        <line x1="0" y1="32" x2="594" y2="32" stroke="#F1F5F9"/>
+      </g>
+
+      <!-- Row 3: Menjelang Penuh -->
+      <g transform="translate(28, 202)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#0F172A">Level 61% - 89%</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#F57F17">PWM 95 (~4.5V)</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#FEF3C7"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#B45309" text-anchor="middle">PELAN (~37%)</text>
+        <text x="390" y="20" font-size="10" fill="#475569">Deselerasi halus</text>
+        <line x1="0" y1="32" x2="594" y2="32" stroke="#F1F5F9"/>
+      </g>
+
+      <!-- Row 4: Penuh -->
+      <g transform="translate(28, 242)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#0F172A">Level &ge; 90%</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#1565C0">PWM 0 (0V)</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#DBEAFE"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#1D4ED8" text-anchor="middle">MATI (0%)</text>
+        <text x="390" y="20" font-size="10" fill="#475569">Target penuh aman</text>
+        <line x1="0" y1="32" x2="594" y2="32" stroke="#F1F5F9"/>
+      </g>
+
+      <!-- Row 5: Kekeruhan Kritis -->
+      <g transform="translate(28, 282)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#C62828">NTU &gt; 100</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#C62828">PWM 0 (0V)</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#FEE2E2"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#B91C1C" text-anchor="middle">STOP (KERUH)</text>
+        <text x="390" y="20" font-size="10" fill="#B91C1C">Proteksi darurat air</text>
+        <line x1="0" y1="32" x2="594" y2="32" stroke="#F1F5F9"/>
+      </g>
+
+      <!-- Row 6: Offline -->
+      <g transform="translate(28, 322)">
+        <text x="12" y="20" font-size="10.5" font-weight="700" fill="#64748B">ESP32 Offline</text>
+        <text x="130" y="20" font-size="10.5" font-weight="700" fill="#64748B">Standby</text>
+        <rect x="260" y="4" width="94" height="22" rx="11" fill="#F1F5F9"/>
+        <text x="307" y="19" font-size="9.5" font-weight="700" fill="#475569" text-anchor="middle">OFFLINE</text>
+        <text x="390" y="20" font-size="10" fill="#475569">Menunggu transmisi</text>
+      </g>
+    </g>
+
+    <!-- Card 2: UX Design System & Token Styleguide -->
+    <g transform="translate(0, 440)">
+      <rect width="650" height="285" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+      <text x="28" y="36" class="card-title">4. Sistem Desain &amp; Token Visual (Design System)</text>
+      <text x="28" y="56" class="card-desc">Panduan tipografi, palet warna semantik, dan styling tombol aplikasi.</text>
+      <line x1="28" y1="70" x2="622" y2="70" stroke="#F1F5F9" stroke-width="1.5"/>
+
+      <!-- Color Swatches -->
+      <g transform="translate(28, 86)">
+        <text x="0" y="14" font-size="10.5" font-weight="700" fill="#0F172A">Palet Warna Semantik:</text>
+        
+        <!-- Swatch 1: Aquatic Bg -->
+        <g transform="translate(0, 24)">
+          <rect width="40" height="40" rx="8" fill="#D1E3F8" stroke="#90CAF9"/>
+          <text x="48" y="18" font-size="10" font-weight="700" fill="#0F172A">#D1E3F8</text>
+          <text x="48" y="32" font-size="9" fill="#64748B">Canvas Background</text>
+        </g>
+
+        <!-- Swatch 2: Sidebar Blue -->
+        <g transform="translate(150, 24)">
+          <rect width="40" height="40" rx="8" fill="#BBDEFB" stroke="#90CAF9"/>
+          <text x="48" y="18" font-size="10" font-weight="700" fill="#0F172A">#BBDEFB</text>
+          <text x="48" y="32" font-size="9" fill="#64748B">Sidebar Tint</text>
+        </g>
+
+        <!-- Swatch 3: Primary Blue -->
+        <g transform="translate(300, 24)">
+          <rect width="40" height="40" rx="8" fill="#0D47A1"/>
+          <text x="48" y="18" font-size="10" font-weight="700" fill="#0F172A">#0D47A1</text>
+          <text x="48" y="32" font-size="9" fill="#64748B">Brand Primary</text>
+        </g>
+
+        <!-- Swatch 4: Success Green -->
+        <g transform="translate(450, 24)">
+          <rect width="40" height="40" rx="8" fill="#2E7D32"/>
+          <text x="48" y="18" font-size="10" font-weight="700" fill="#0F172A">#2E7D32</text>
+          <text x="48" y="32" font-size="9" fill="#64748B">Safe / Active</text>
+        </g>
+      </g>
+
+      <!-- Typography Tokens -->
+      <g transform="translate(28, 175)">
+        <text x="0" y="14" font-size="10.5" font-weight="700" fill="#0F172A">Skala Tipografi (Font Family: 'Inter'):</text>
+        <g transform="translate(0, 24)">
+          <text x="0" y="14" font-size="15" font-weight="800" fill="#000000">Heading 1: 28px Bold</text>
+          <text x="180" y="14" font-size="13" font-weight="700" fill="#000000">Heading 2: 20px</text>
+          <text x="320" y="14" font-size="11.5" font-weight="600" fill="#000000">Body: 13.5px</text>
+          <text x="440" y="14" font-size="10" font-weight="600" fill="#455A64">Micro/Label: 11px</text>
+          <text x="0" y="34" font-size="10" fill="#64748B">Warna teks diseragamkan warna hitam murni (#000000) sesuai kaidah keterbacaan tinggi WCAG.</text>
+        </g>
+      </g>
+
+      <!-- Interactive Elements Summary -->
+      <g transform="translate(28, 242)">
+        <rect width="594" height="32" rx="8" fill="#EFF6FF" stroke="#BFDBFE"/>
+        <text x="12" y="20" font-size="10" font-weight="700" fill="#1D4ED8">⚡ Komponen Interaktif:</text>
+        <text x="150" y="20" font-size="9.5" fill="#1E3A8A">Pill Buttons (Radius 30px) • Modern Switch Toggles • Live Pulse Indicators</text>
+      </g>
+    </g>
+  </g>
+</svg>

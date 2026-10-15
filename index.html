@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Monitoring Air IoT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .active-link { 
+            background-color: #1d4ed8 !important; 
+            color: white !important; 
+        }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(10px); 
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex h-screen overflow-hidden text-slate-700">
+
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+        <div class="p-6">
+            <h1 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-droplet text-blue-500 mr-2"></i> WATER-IoT
+            </h1>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a href="#" onclick="showPage('home')" class="flex items-center p-3 rounded-xl hover:bg-slate-800 transition active-link" id="link-home">
+                <i class="fas fa-home mr-3 w-5"></i> Dashboard
+            </a>
+            <a href="#" onclick="showPage('settings')" class="flex items-center p-3 rounded-xl hover:bg-slate-800 transition" id="link-settings">
+                <i class="fas fa-cog mr-3 w-5"></i> Pengaturan
+            </a>
+            <a href="#" onclick="showPage('logs')" class="flex items-center p-3 rounded-xl hover:bg-slate-800 transition" id="link-logs">
+                <i class="fas fa-bell mr-3 w-5"></i> Notifikasi
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-800 text-xs text-slate-500 text-center">
+            v1.0.2 &copy; 2026
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-y-auto">
+        
+        <header class="bg-white p-4 shadow-sm flex justify-between items-center px-8">
+            <h2 id="page-title" class="text-xl font-semibold">Dashboard Utama</h2>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p class="text-xs font-bold text-green-500">CONNECTED</p>
+                    <p class="text-[10px] text-slate-400 italic">ESP32-BakMandi-01</p>
+                </div>
+                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-slate-500"></i>
+                </div>
+            </div>
+        </header>
+
+        <div id="page-home" class="p-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <p class="text-sm text-slate-400 mb-2">Kontrol Pompa</p>
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-lg" id="status-pompa">NYALA</span>
+                        <input type="checkbox" checked class="w-12 h-6 bg-slate-300 rounded-full appearance-none checked:bg-blue-600 transition-all cursor-pointer relative after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:top-0.5 after:left-0.5 checked:after:left-6 after:transition-all shadow-inner">
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-500">
+                    <p class="text-sm text-slate-400">Tangki Penuh</p>
+                    <p class="text-xl font-bold mt-1 text-blue-600 font-mono italic uppercase">YA</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-slate-300 text-slate-300 font-mono italic uppercase">
+                    <p class="text-sm text-slate-400 font-sans not-italic text-slate-400">Tangki Kosong</p>
+                    <p class="text-xl font-bold mt-1 font-mono italic uppercase text-slate-300">TIDAK</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <p class="text-sm text-slate-400">Debit Air</p>
+                    <p class="text-xl font-bold mt-1">8.5 <span class="text-sm font-normal text-slate-400">L/min</span></p>
+                </div>
+            </div>
+
+            <div class="bg-white p-10 rounded-3xl shadow-sm flex flex-col md:flex-row items-center gap-12">
+                <div class="relative w-64 h-80 bg-slate-100 rounded-b-3xl border-x-4 border-b-4 border-slate-300 overflow-hidden shadow-inner">
+                    <div class="absolute bottom-0 w-full bg-gradient-to-t from-blue-600 to-blue-400 transition-all duration-1000" style="height: 80%;">
+                        <div class="absolute top-0 left-0 w-full h-4 bg-white opacity-20 animate-pulse"></div>
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <h3 class="text-5xl font-black text-slate-800 mix-blend-overlay">80%</h3>
+                    </div>
+                </div>
+                <div class="flex-1 space-y-4">
+                    <h3 class="text-2xl font-bold">Detail Real-Time</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between border-b py-2 text-lg">
+                            <span>Ketinggian (cm)</span>
+                            <b id="val-cm" class="text-blue-600">64 cm</b>
+                        </div>
+                        <div class="flex justify-between border-b py-2 text-lg">
+                            <span>Estimasi Penuh</span>
+                            <b id="val-estimasi" class="text-slate-600">12 Menit</b>
+                        </div>
+                        <div class="flex justify-between border-b py-2 text-lg">
+                            <span>Debit Air</span>
+                            <b id="val-debit" class="text-emerald-600">8.5 L/min</b>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 italic mt-4">*Data diperbarui secara real-time</p>
+                </div>
+            </div>
+        </div> <div id="page-settings" class="hidden p-8 max-w-2xl mx-auto w-full">
+            <div class="bg-white p-8 rounded-3xl shadow-sm space-y-6">
+                <h3 class="text-xl font-bold border-b pb-4">Konfigurasi Otomatis</h3>
+                <div>
+                    <label class="block text-sm font-medium mb-2 uppercase tracking-wide text-slate-500">Batas Atas Pompa Mati (%)</label>
+                    <input type="number" value="95" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 uppercase tracking-wide text-slate-500">Batas Bawah Pompa Nyala (%)</label>
+                    <input type="number" value="20" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="alert('Pengaturan Tersimpan!')" class="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                    SIMPAN PENGATURAN
+                </button>
+            </div>
+        </div>
+
+        <div id="page-logs" class="hidden p-8">
+            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-slate-200">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b">
+                        <tr>
+                            <th class="p-4 px-6 text-sm font-bold uppercase text-slate-500">Waktu</th>
+                            <th class="p-4 px-6 text-sm font-bold uppercase text-slate-500">Aktivitas</th>
+                            <th class="p-4 px-6 text-sm font-bold uppercase text-slate-500">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr>
+                            <td class="p-4 px-6 text-sm text-slate-500 font-mono">22:30:15</td>
+                            <td class="p-4 px-6 text-slate-700 uppercase font-semibold">Pompa diaktifkan otomatis</td>
+                            <td class="p-4 px-6"><span class="bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded-full font-bold">SUCCESS</span></td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 px-6 text-sm text-slate-500 font-mono">22:45:02</td>
+                            <td class="p-4 px-6 text-slate-700 uppercase font-semibold">Tangki mencapai 100%</td>
+                            <td class="p-4 px-6"><span class="bg-blue-100 text-blue-600 text-[10px] px-2 py-1 rounded-full font-bold">PENUH</span></td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 px-6 text-sm text-slate-500 font-mono">22:45:03</td>
+                            <td class="p-4 px-6 text-slate-700 uppercase font-semibold">Pompa dimatikan otomatis</td>
+                            <td class="p-4 px-6"><span class="bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded-full font-bold">SUCCESS</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        function showPage(pageId) {
+            // 1. Sembunyikan semua ID halaman
+            document.getElementById('page-home').classList.add('hidden');
+            document.getElementById('page-settings').classList.add('hidden');
+            document.getElementById('page-logs').classList.add('hidden');
+            
+            // 2. Munculkan halaman yang dipilih
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            
+            // 3. Update Judul di Header
+            const titles = { 
+                'home': 'Dashboard Utama', 
+                'settings': 'Pengaturan Sistem', 
+                'logs': 'Notifikasi & Riwayat' 
+            };
+            document.getElementById('page-title').innerText = titles[pageId];
+
+            // 4. Update efek warna biru di sidebar
+            document.querySelectorAll('nav a').forEach(el => el.classList.remove('active-link'));
+            document.getElementById('link-' + pageId).classList.add('active-link');
+        }
+    </script>
+</body>
+</html>
