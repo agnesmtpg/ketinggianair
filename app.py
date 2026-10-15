@@ -14,10 +14,16 @@ from firebase_admin import credentials, db
 # ============================================================
 # KONFIGURASI
 # ============================================================
+def _secret(nama, default=""):
+    try:
+        return st.secrets[nama]
+    except Exception:
+        return os.environ.get(nama, default)
+
 FIREBASE_URL = "https://ketinggian-dd1fb-default-rtdb.firebaseio.com"
 KEY_PATH = r"D:\proyek 3 & proposal ta\web\serviceAccountKey.json"
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "8953132207:AAE4iCqGj9weJ80VXJWjb4WLaSEzb2aNI78")
-TELEGRAM_CHAT_ID = "1156974464"  # penerima awal (otomatis ikut terdaftar)
+TELEGRAM_TOKEN = _secret("T8953132207:AAE4iCqGj9weJ80VXJWjb4WLaSEzb2aNI78")
+TELEGRAM_CHAT_ID = _secret("1156974464", "")
 DASHBOARD_URL = "http://localhost:8501"
 SUBS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_subscribers.json")
 TG_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
@@ -46,7 +52,7 @@ def init_firebase():
         if os.path.exists(KEY_PATH):
             cred = credentials.Certificate(KEY_PATH)
         else:
-            cred = credentials.Certificate(dict(st.secrets["firebase"]))
+            cred = credentials.Certificate(json.loads(st.secrets["FIREBASE_KEY"]))
         firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
     return True
 
