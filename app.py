@@ -26,7 +26,7 @@ KEY_PATH      = r"D:\proyek 3 & proposal ta\web\serviceAccountKey.json"
 
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN", "8953132207:AAE4iCqGj9weJ80VXJWjb4WLaSEzb2aNI78")
 TELEGRAM_CHAT_ID = "1156974464"
-DASHBOARD_URL    = "http://localhost:8501"
+DASHBOARD_URL    = "https://monitoringketinggianair.streamlit.app/"
 SUBS_PATH        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_subscribers.json")
 TG_API           = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
