@@ -8,201 +8,169 @@ from datetime import datetime
 import requests
 import pandas as pd
 import streamlit as st
-import firebase_admin
-from firebase_admin import credentials, db
+
+try:
+    import firebase_admin
+    from firebase_admin import credentials, db
+except ImportError:
+    firebase_admin = None
+    credentials = None
+    db = None
 
 # ============================================================
-# KONFIGURASI
+# KONFIGURASI FIREBASE & TELEGRAM (SESUAI KODINGAN ARDUINO)
 # ============================================================
-def _secret(nama, default=""):
-    try:
-        return st.secrets[nama]
-    except Exception:
-        return os.environ.get(nama, default)
+FIREBASE_URL  = "https://ketinggian-dd1fb-default-rtdb.firebaseio.com"
+FIREBASE_AUTH = "N6jEJCYluaJ0aHZYRGN3WUAiqEaMGXd37d2haHHY"
+KEY_PATH      = r"D:\proyek 3 & proposal ta\web\serviceAccountKey.json"
 
-FIREBASE_URL = "https://ketinggian-dd1fb-default-rtdb.firebaseio.com"
-KEY_PATH = r"D:\proyek 3 & proposal ta\web\serviceAccountKey.json"
-TELEGRAM_TOKEN = _secret("T8953132207:AAE4iCqGj9weJ80VXJWjb4WLaSEzb2aNI78")
-TELEGRAM_CHAT_ID = _secret("1156974464", "")
-DASHBOARD_URL = "http://localhost:8501"
-SUBS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_subscribers.json")
-TG_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN", "8953132207:AAE4iCqGj9weJ80VXJWjb4WLaSEzb2aNI78")
+TELEGRAM_CHAT_ID = "1156974464"
+DASHBOARD_URL    = "http://localhost:8501"
+SUBS_PATH        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_subscribers.json")
+TG_API           = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-# Menu perintah bot (tampil di tombol "Menu" Telegram)
 TG_COMMANDS = [
     {"command": "status", "description": "Lihat kondisi air & pompa saat ini"},
-    {"command": "on", "description": "Hidupkan pompa manual"},
-    {"command": "off", "description": "Matikan pompa manual"},
-    {"command": "dashboard", "description": "Link dashboard"},
-    {"command": "menu", "description": "Tampilkan menu"},
+    {"command": "dashboard", "description": "Buka link web dashboard"},
+    {"command": "menu", "description": "Tampilkan menu perintah"},
 ]
-
-DEFAULT_CONFIG = {
-    "tinggi_bak": 72,
-    "batas_atas": 90,
-    "batas_bawah": 20,
-    "ambang_keruh": 100,
-    "mode": "Otomatis (Fuzzy Mamdani)"
-}
 
 
 @st.cache_resource
 def init_firebase():
-    if not firebase_admin._apps:
-        if os.path.exists(KEY_PATH):
-            cred = credentials.Certificate(KEY_PATH)
-        else:
-            cred = credentials.Certificate(json.loads(st.secrets["FIREBASE_KEY"]))
-        firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
-    return True
+    """Inisialisasi Firebase Admin SDK jika tersedia & serviceAccountKey valid."""
+    if firebase_admin is not None and not firebase_admin._apps:
+        try:
+            if os.path.exists(KEY_PATH):
+                cred = credentials.Certificate(KEY_PATH)
+                firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
+                return True
+        except Exception:
+            pass
+    return False
 
 
 init_firebase()
 
 
 # ============================================================
-# FUNGSI FIREBASE
+# FUNGSI PEMBACAAN DATA FIREBASE (SESUAI NODE ARDUINO)
 # ============================================================
 def baca_sensor():
+    """
+    Membaca data LATEST dari node '/bak_mandi/latest'.
+    Struktur data dari ESP32:
+    - distanceCm, levelPersen, pwmMosfet, statusPompa,
+    - flowRate, totalLiter, turbidityVolt, turbidityRaw, timestamp
+    """
+    data = None
     try:
-        data = db.reference("sensor").get()
-        return data if data else None
-    except Exception:
-        return None
-
-
-def baca_config():
-    try:
-        data = db.reference("config").get()
-        if data:
-            return data
+        if firebase_admin and firebase_admin._apps:
+            data = db.reference("bak_mandi/latest").get()
     except Exception:
         pass
-    return DEFAULT_CONFIG
+
+    if not data:
+        try:
+            r = requests.get(f"{FIREBASE_URL}/bak_mandi/latest.json?auth={FIREBASE_AUTH}", timeout=5)
+            if r.status_code == 200 and r.json():
+                data = r.json()
+        except Exception:
+            pass
+
+    return data if isinstance(data, dict) else None
 
 
-def baca_logs():
+def baca_history(limit=250):
+    """
+    Membaca data HISTORIS dari node '/bak_mandi/history' (Firebase RTDB).
+    Setiap entri disimpan oleh ESP32 secara periodik.
+    """
+    data = None
     try:
-        data = db.reference("logs").get()
-        if data:
-            rows = []
-            for k, v in data.items():
-                if isinstance(v, dict):
-                    v_copy = dict(v)
-                    v_copy["id"] = k
-                    rows.append(v_copy)
-            return sorted(rows, key=lambda x: str(x.get("waktu", "")), reverse=True)
+        if firebase_admin and firebase_admin._apps:
+            data = db.reference("bak_mandi/history").order_by_key().limit_to_last(limit).get()
     except Exception:
         pass
-    return []
+
+    if not data:
+        try:
+            r = requests.get(
+                f"{FIREBASE_URL}/bak_mandi/history.json",
+                params={"orderBy": '"$key"', "limitToLast": limit, "auth": FIREBASE_AUTH},
+                timeout=8
+            )
+            if r.status_code == 200 and r.json():
+                data = r.json()
+        except Exception:
+            pass
+
+    if not data:
+        try:
+            r = requests.get(f"{FIREBASE_URL}/bak_mandi/history.json?auth={FIREBASE_AUTH}", timeout=8)
+            if r.status_code == 200 and r.json():
+                data = r.json()
+        except Exception:
+            pass
+
+    rows = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if isinstance(v, dict):
+                row = dict(v)
+                row["id_log"] = str(k)
+                rows.append(row)
+
+    def sort_key(item):
+        ts = str(item.get("timestamp", item.get("id_log", "")))
+        if ts.startswith("2026"):
+            return (2, ts)
+        elif ts[:4].isdigit() and 2024 <= int(ts[:4]) <= 2030:
+            return (1, ts)
+        return (0, ts)
+
+    rows = sorted(rows, key=sort_key, reverse=True)
+    return rows
 
 
-def set_command(key: str, value):
-    try:
-        db.reference(f"command/{key}").set(value)
-        return True
-    except Exception:
-        return False
-
-
-def simpan_config_firebase(data: dict):
-    try:
-        db.reference("config").set(data)
-        return True
-    except Exception:
-        return False
-
-
-# ============================================================
-# LOGIKA FUZZY LOGIC MAMDANI
-# ============================================================
-def evaluasi_fuzzy_mamdani(level_percent, ntu):
+def evaluasi_kualitas_air(volt):
     """
-    Kendali adaptif pompa 12V via driver MOSFET D4184 PWM (0-255):
-    Masukan 1 : Level Air (%) [Kosong, Sedang, Penuh]
-    Masukan 2 : Kekeruhan (NTU) [Jernih, Agak Keruh, Keruh]
-    Keluaran  : PWM (0 - 255), status kecepatan motor, proteksi kualitas air
+    Sensor turbidity murni memantau kualitas air (tidak menghentikan pompa):
+      - volt >= 2.4 V : Jernih
+      - 1.6 V <= volt < 2.4 V : Agak Keruh
+      - volt < 1.6 V : Keruh
     """
-    if ntu <= 25:
-        mutu_air = "JERNIH"
-        warna_mutu = "#2e7d32"
-    elif ntu <= 100:
-        mutu_air = "AGAK KERUH"
-        warna_mutu = "#f57f17"
+    try:
+        v = float(volt)
+    except Exception:
+        v = 3.0
+
+    if v >= 2.4:
+        return "JERNIH", "#2e7d32"
+    elif v >= 1.6:
+        return "AGAK KERUH", "#f57f17"
     else:
-        mutu_air = "KERUH (BAHAYA)"
-        warna_mutu = "#c62828"
+        return "KERUH", "#c62828"
 
-    if ntu > 100:
-        keputusan = "PROTEKSI DARURAT (AIR KERUH)"
-        pwm_val = 0
-        kecepatan_label = "MATI (STOP)"
-        tegangan_volt = 0.0
-        keterangan = "Sensor turbidity mendeteksi air keruh (> 100 NTU). Pengisian dimatikan otomatis via MOSFET PWM 0 untuk mencegah masuknya air kotor ke bak mandi."
-        badge_color = "#c62828"
-    elif level_percent >= 90:
-        keputusan = "TARGET PENUH TERCAPAI"
-        pwm_val = 0
-        kecepatan_label = "MATI (0%)"
-        tegangan_volt = 0.0
-        keterangan = "Air telah mencapai ambang batas target aman (level >= 90% / jarak <= 10 cm). Daya motor diputus total (PWM 0) secara presisi tanpa luapan air."
-        badge_color = "#1565c0"
-    elif level_percent <= 20:
-        keputusan = "PENGISIAN CEPAT (KOSONG)"
-        pwm_val = 255
-        kecepatan_label = "CEPAT (100%)"
-        tegangan_volt = 12.0
-        keterangan = "Air berada di bawah ambang minimum (level <= 20% / jarak >= 48 cm). Driver MOSFET memacu pompa pada daya maksimal (PWM 255 / 12V) agar pengisian efisien."
-        badge_color = "#2e7d32"
-    elif level_percent <= 60:
-        keputusan = "PENGISIAN STABIL (SEDANG)"
-        pwm_val = 175
-        kecepatan_label = "SEDANG (~68%)"
-        tegangan_volt = 8.2
-        keterangan = "Level air berada di zona sedang (21% - 60%). Mesin inferensi Mamdani memberikan sinyal PWM 175 untuk menjaga debit pengisian stabil."
-        badge_color = "#0288d1"
+
+def get_badge_pompa(status_pompa):
+    """Warna badge status pompa (murni berdasarkan ketinggian air)."""
+    st_upper = str(status_pompa).upper()
+    if "80%" in st_upper or "PENUH" in st_upper:
+        return "#1565c0"  # Biru Target Tercapai
+    elif "CEPAT" in st_upper:
+        return "#2e7d32"  # Hijau Cepat
+    elif "SEDANG" in st_upper:
+        return "#0288d1"  # Biru Cerah Sedang
+    elif "PELAN" in st_upper:
+        return "#f57f17"  # Oranye Pelan
     else:
-        keputusan = "DESELERASI HALUS (MENDEKATI PENUH)"
-        pwm_val = 95
-        kecepatan_label = "PELAN (~37%)"
-        tegangan_volt = 4.5
-        keterangan = "Level air mendekati ambang batas target (61% - 89%). Pompa melambat secara halus (PWM 95 / ~4.5V) guna meredam riak air dan mencegah luapan (overshoot)."
-        badge_color = "#f57f17"
-
-    duty_percent = int((pwm_val / 255.0) * 100)
-
-    return {
-        "mutu_air": mutu_air,
-        "warna_mutu": warna_mutu,
-        "keputusan": keputusan,
-        "badge_color": badge_color,
-        "pwm": pwm_val,
-        "duty": duty_percent,
-        "kecepatan_label": kecepatan_label,
-        "tegangan_volt": tegangan_volt,
-        "pompa_aktif": (pwm_val > 0),
-        "keterangan": keterangan
-    }
-
-
-def hitung_level(sensor, tinggi_bak):
-    """Persentase level air dari data sensor."""
-    if not sensor:
-        return 0
-    jarak = float(sensor.get("jarak", 0.0))
-    if jarak > 0:
-        return max(0, min(100, int((tinggi_bak - jarak) / tinggi_bak * 100)))
-    return int(sensor.get("level", 0))
-
-
-def ambil_ntu(sensor):
-    if not sensor:
-        return 8.5
-    return float(sensor.get("turbidity", sensor.get("kekeruhan", sensor.get("ntu", 8.5))))
+        return "#546e7a"  # Abu-abu Mati
 
 
 # ============================================================
-# TELEGRAM: SUBSCRIBER, KIRIM PESAN, BOT PERINTAH
+# TELEGRAM BOT & NOTIFIKASI
 # ============================================================
 _subs_lock = threading.Lock()
 
@@ -239,7 +207,7 @@ def tg_kirim(chat_id, teks):
 
 
 def kirim_telegram(pesan: str):
-    """Broadcast ke semua subscriber."""
+    """Broadcast pesan ke seluruh subscriber Telegram terdaftar."""
     subs = baca_subscribers()
     if not subs:
         return False, "Belum ada penerima (kirim /start ke bot)"
@@ -255,35 +223,33 @@ def kirim_telegram(pesan: str):
 
 def teks_menu():
     return (
-        "Halo! Notifikasi Pemantauan Air sudah aktif.\n\n"
-        "/status - lihat kondisi saat ini\n"
-        "/on - hidupkan pompa manual\n"
-        "/off - matikan pompa manual\n"
-        f"/dashboard - {DASHBOARD_URL}"
+        "Halo! Notifikasi Sistem Pemantauan Air Bak Mandi aktif.\n\n"
+        "/status - Cek kondisi air & pompa saat ini\n"
+        f"/dashboard - Buka dashboard {DASHBOARD_URL}"
     )
 
 
 def teks_status():
     sensor = baca_sensor()
     if not sensor:
-        return f"📊 KONDISI SAAT INI:\n⚠️ ESP32 offline / belum ada data.\nDashboard: {DASHBOARD_URL}"
-    cfg = baca_config()
-    tinggi = cfg.get("tinggi_bak", 72)
-    level = hitung_level(sensor, tinggi)
-    ntu = ambil_ntu(sensor)
-    fz = evaluasi_fuzzy_mamdani(level, ntu)
-    cmd = None
-    try:
-        cmd = db.reference("command/pompa").get()
-    except Exception:
-        pass
+        return f"📊 KONDISI SAAT INI:\n⚠️ ESP32 Offline / belum ada data di /bak_mandi/latest.\nDashboard: {DASHBOARD_URL}"
+
+    level = float(sensor.get("levelPersen", 0.0))
+    jarak = float(sensor.get("distanceCm", 0.0))
+    pwm = int(sensor.get("pwmMosfet", 0))
+    status_p = str(sensor.get("statusPompa", "MATI"))
+    flow = float(sensor.get("flowRate", 0.0))
+    volt = float(sensor.get("turbidityVolt", 0.0))
+    wkt = str(sensor.get("timestamp", "-"))
+    mutu, _ = evaluasi_kualitas_air(volt)
+
     return (
-        "📊 KONDISI SAAT INI:\n"
-        f"💧 Level Bak: {level}%\n"
-        f"🧪 Kekeruhan: {ntu:.1f} NTU ({fz['mutu_air']})\n"
-        f"🚰 Pompa: {'ON' if fz['pompa_aktif'] else 'OFF'} - PWM {fz['pwm']} ({fz['kecepatan_label']})\n"
-        f"⚙️ Keputusan: {fz['keputusan']}\n"
-        f"🕹️ Perintah manual terakhir: {cmd if cmd else '-'}\n"
+        "📊 KONDISI AIR & POMPA SAAT INI:\n"
+        f"💧 Level Bak: {level:.1f}% (Jarak: {jarak:.1f} cm)\n"
+        f"🚰 Status Pompa: {status_p} (PWM: {pwm})\n"
+        f"🌊 Debit Aliran: {flow:.1f} L/min\n"
+        f"🧪 Turbidity: {volt:.2f} V ({mutu})\n"
+        f"⏰ Terakhir Diperbarui: {wkt}\n"
         f"Dashboard: {DASHBOARD_URL}"
     )
 
@@ -293,27 +259,18 @@ def tangani_perintah(chat_id, text):
     if cmd in ("/start", "/menu"):
         tambah_subscriber(chat_id)
         tg_kirim(chat_id, teks_menu())
-    elif cmd == "/on":
-        ok = set_command("pompa", "ON")
-        tg_kirim(chat_id, "🔌 Pompa berhasil DIHIDUPKAN secara manual." if ok
-                 else "❌ Gagal mengirim perintah ke Firebase.")
-    elif cmd == "/off":
-        ok = set_command("pompa", "OFF")
-        tg_kirim(chat_id, "🛑 Pompa berhasil DIMATIKAN secara manual." if ok
-                 else "❌ Gagal mengirim perintah ke Firebase.")
-    elif cmd == "/dashboard":
-        tg_kirim(chat_id, f"Dashboard: {DASHBOARD_URL}")
     elif cmd == "/status":
         tg_kirim(chat_id, teks_status())
+    elif cmd == "/dashboard":
+        tg_kirim(chat_id, f"Link Dashboard Monitoring: {DASHBOARD_URL}")
 
 
 def telegram_polling_worker():
-    """Baca perintah Telegram terus-menerus (jalan di thread terpisah, tanpa st.session_state)."""
     last_update_id = 0
     while True:
         try:
             res = requests.get(f"{TG_API}/getUpdates",
-                               params={"offset": last_update_id + 1, "timeout": 5}, timeout=15)
+                            params={"offset": last_update_id + 1, "timeout": 5}, timeout=15)
             if res.status_code == 200:
                 data = res.json()
                 if data.get("ok"):
@@ -329,7 +286,6 @@ def telegram_polling_worker():
 
 @st.cache_resource
 def start_telegram_bot():
-    """Jalankan bot sekali saja per proses Streamlit."""
     try:
         requests.post(f"{TG_API}/setMyCommands", json={"commands": TG_COMMANDS}, timeout=10)
     except Exception:
@@ -342,46 +298,38 @@ def start_telegram_bot():
 start_telegram_bot()
 
 
-def cek_notifikasi(fuzzy_res, water_level, ntu):
-    """Kirim peringatan otomatis hanya saat kondisi penting BERUBAH (tidak spam tiap refresh)."""
-    if not st.session_state.get("notifikasi_aktif", True):
+def cek_notifikasi_otomatis(sensor):
+    """Notifikasi hanya fokus pada target ketinggian air."""
+    if not sensor or not st.session_state.get("notifikasi_aktif", True):
         return
-    penting = {
-        "PROTEKSI DARURAT (AIR KERUH)": "🚨 AIR KERUH! Pompa dihentikan otomatis.",
-        "TARGET PENUH TERCAPAI": "✅ Bak sudah penuh. Pompa dimatikan.",
-        "PENGISIAN CEPAT (KOSONG)": "⚠️ Air bak hampir kosong. Pompa mengisi penuh.",
-    }
-    kini = fuzzy_res["keputusan"]
-    if kini == st.session_state.get("last_keputusan"):
+
+    status_kini = str(sensor.get("statusPompa", "MATI"))
+    if status_kini == st.session_state.get("last_status_pompa"):
         return
-    st.session_state.last_keputusan = kini
-    if kini in penting:
+
+    st.session_state.last_status_pompa = status_kini
+    level = float(sensor.get("levelPersen", 0.0))
+    wkt = str(sensor.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+    if "80%" in status_kini or "PENUH" in status_kini:
         kirim_telegram(
-            f"{penting[kini]}\n\n"
-            f"💧 Level: {water_level}%\n"
-            f"🧪 Kekeruhan: {ntu:.1f} NTU\n"
-            f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"✅ TARGET 80% TERCAPAI!\n"
+            f"Bak mandi telah mencapai 80%. Pompa telah dimatikan otomatis oleh ESP32.\n\n"
+            f"💧 Level Air: {level:.1f}%\n"
+            f"⏰ Waktu: {wkt}\n"
+            f"Dashboard: {DASHBOARD_URL}"
+        )
+    elif "CEPAT" in status_kini and level <= 25.0:
+        kirim_telegram(
+            f"⚠️ AIR BAK RENDAH!\n"
+            f"Level air rendah ({level:.1f}%). Pompa mulai mengisi daya penuh.\n\n"
+            f"⏰ Waktu: {wkt}\n"
             f"Dashboard: {DASHBOARD_URL}"
         )
 
 
 # ============================================================
-# EKSPOR ASET FIGMA
-# ============================================================
-def generate_all_figma_svgs(out_dir=None):
-    if out_dir is None:
-        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figma")
-    os.makedirs(out_dir, exist_ok=True)
-    try:
-        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-        from figma.generate_all import generate_all as gen_figma
-        return gen_figma(out_dir)
-    except Exception as e:
-        return f"Terjadi kesalahan saat mengekspor: {e}"
-
-
-# ============================================================
-# KONFIGURASI HALAMAN & TEMA STREAMLIT
+# KONFIGURASI TAMPILAN STREAMLIT
 # ============================================================
 st.set_page_config(
     page_title="Sistem Monitoring Air IoT",
@@ -399,12 +347,11 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* Kembalikan font Material Symbols agar icon bawaan Streamlit tidak rusak */
     [class*="material-symbols"], [class*="material-icons"], .material-symbols-rounded, .material-symbols-outlined {
         font-family: 'Material Symbols Rounded', 'Material Icons' !important;
     }
 
-    /* 1. HILANGKAN TULISAN MENTAH 'keyboard_double' & GANTI JADI TOMBOL BACK '← Kembali' */
+    /* TOMBOL KEMBALI SIDEBAR */
     [data-testid="stSidebarHeader"] {
         padding: 0.8rem 1rem 0.2rem 1rem !important;
         display: flex !important;
@@ -428,7 +375,7 @@ st.markdown("""
         align-items: center !important;
         gap: 6px !important;
         cursor: pointer !important;
-        font-size: 0px !important; /* Hapus teks mentah keyboard_double */
+        font-size: 0px !important;
         line-height: 0 !important;
         overflow: hidden !important;
         min-height: 34px !important;
@@ -441,7 +388,6 @@ st.markdown("""
         transform: translateX(-2px) !important;
     }
     
-    /* Sembunyikan semua elemen teks/span internal keyboard_double */
     [data-testid="stSidebarCollapseButton"] button * {
         font-size: 0px !important;
         display: none !important;
@@ -450,7 +396,6 @@ st.markdown("""
         height: 0 !important;
     }
     
-    /* Tampilkan icon panah back dan teks 'Kembali' */
     [data-testid="stSidebarCollapseButton"] button::before {
         content: "←" !important;
         font-size: 16px !important;
@@ -471,7 +416,6 @@ st.markdown("""
         display: inline-block !important;
     }
 
-    /* TOMBOL BUKA SIDEBAR SAAT COLLAPSED */
     [data-testid="stSidebarCollapsedControl"] {
         top: 0.8rem !important;
         left: 0.8rem !important;
@@ -510,7 +454,7 @@ st.markdown("""
         font-family: 'Inter', sans-serif !important;
     }
 
-    /* 2. HILANGKAN WARNA HITAM PADA HEADER & ATUR WARNA TEMA PENUH */
+    /* LATAR BELAKANG AQUATIC BLUE */
     header, [data-testid="stHeader"], .stAppHeader {
         background-color: transparent !important;
         background: transparent !important;
@@ -534,7 +478,6 @@ st.markdown("""
         background-color: #d1e3f8 !important;
     }
     
-    /* 2. OPTIMALISASI CONTAINER HALAMAN UTAMA (RESPONSIF & PADDING BERSIH) */
     .block-container, [data-testid="block-container"] {
         padding-top: 1.8rem !important;
         padding-bottom: 2rem !important;
@@ -543,7 +486,7 @@ st.markdown("""
         max-width: 100% !important;
     }
     
-    /* 3. SIDEBAR RESPONSIF */
+    /* SIDEBAR */
     [data-testid="stSidebar"] {
         background-color: #bbdefb !important;
         border-right: 1px solid #90caf9;
@@ -553,10 +496,10 @@ st.markdown("""
         padding-bottom: 1.5rem !important;
     }
     
-    /* 4. GRID KARTU METRIK RESPONSIF DENGAN TINGGI SERAGAM */
+    /* GRID KARTU METRIK */
     .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         gap: 14px;
         width: 100%;
         margin-bottom: 20px;
@@ -600,7 +543,7 @@ st.markdown("""
         line-height: 1.3;
     }
     
-    /* 5. TANK CONTAINER RESPONSIF */
+    /* TANGKI AIR */
     .tank-container {
         background: #ffffff;
         border-radius: 22px;
@@ -633,16 +576,6 @@ st.markdown("""
         background: linear-gradient(135deg, #1e88e5, #0d47a1) !important;
         box-shadow: 0 6px 20px rgba(13, 71, 161, 0.45) !important;
     }
-    
-    .badge-pill {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.3px;
-        text-transform: uppercase;
-    }
 
     @media (max-width: 768px) {
         .block-container, [data-testid="block-container"] {
@@ -661,7 +594,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Session state
+# State
 if "auto_refresh" not in st.session_state:
     st.session_state.auto_refresh = True
 if "notifikasi_aktif" not in st.session_state:
@@ -677,9 +610,10 @@ with st.sidebar:
             <h2 style='margin: 0; color: #000000; font-size: 24px;'>Water Monitoring</h2>
         </div>
     """, unsafe_allow_html=True)
+
     menu = st.radio(
         "Menu",
-        ["Dashboard Utama", "Grafik dan Historis", "Riwayat & Notifikasi"],
+        ["Dashboard Utama", "Riwayat & Notifikasi"],
         key="nav_menu"
     )
 
@@ -692,20 +626,19 @@ with st.sidebar:
 
     sensor_now = baca_sensor()
     if sensor_now:
-        wkt = sensor_now.get("waktu", datetime.now().strftime("%H:%M:%S"))
-        ip = sensor_now.get("ipv4", "WiFi Online")
+        wkt = sensor_now.get("timestamp", datetime.now().strftime("%H:%M:%S"))
         st.markdown(f"""
-            <div style='background: rgba(255,255,255,0.8); padding: 12px; border-radius: 14px; border-left: 4px solid #2e7d32; margin-bottom: 12px;'>
+            <div style='background: rgba(255,255,255,0.85); padding: 12px; border-radius: 14px; border-left: 4px solid #2e7d32; margin-bottom: 12px;'>
                 <p style='margin:0; font-size: 12px; font-weight: 700; color: #2e7d32;'>● ESP32 TERHUBUNG</p>
-                <p style='margin:2px 0 0 0; font-size: 11px; color: #000000;'>Waktu: <b>{wkt}</b></p>
-                <p style='margin:0; font-size: 10px; color: #000000;'>IP: {ip}</p>
+                <p style='margin:2px 0 0 0; font-size: 11px; color: #000000;'>Node: <b>/bak_mandi/latest</b></p>
+                <p style='margin:0; font-size: 10px; color: #000000;'>Waktu: {wkt}</p>
             </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-            <div style='background: rgba(255,255,255,0.8); padding: 12px; border-radius: 14px; border-left: 4px solid #c62828; margin-bottom: 12px;'>
+            <div style='background: rgba(255,255,255,0.85); padding: 12px; border-radius: 14px; border-left: 4px solid #c62828; margin-bottom: 12px;'>
                 <p style='margin:0; font-size: 12px; font-weight: 700; color: #c62828;'>○ ESP32 OFFLINE</p>
-                <p style='margin:2px 0 0 0; font-size: 11px; color: #000000;'>Menunggu transmisi data...</p>
+                <p style='margin:2px 0 0 0; font-size: 11px; color: #000000;'>Menunggu data di /bak_mandi/latest...</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -713,12 +646,11 @@ with st.sidebar:
 
     st.write("---")
     st.markdown("**📱 Telegram Bot**")
-    st.session_state.notifikasi_aktif = st.toggle(
-        "Notifikasi otomatis", value=st.session_state.notifikasi_aktif)
-    st.caption("Perintah bot: /status /on /off /dashboard /menu")
+    st.session_state.notifikasi_aktif = st.toggle("Notifikasi otomatis", value=st.session_state.notifikasi_aktif)
+    st.caption("Perintah bot: /status /dashboard /menu")
     st.caption(f"Penerima terdaftar: {len(baca_subscribers())}")
     if st.button("Tes Telegram"):
-        st.session_state.hasil_tes = kirim_telegram("Tes notifikasi dari dashboard")
+        st.session_state.hasil_tes = kirim_telegram("Tes notifikasi dari dashboard monitoring air.")
     if "hasil_tes" in st.session_state:
         ok, info = st.session_state.hasil_tes
         if ok:
@@ -727,76 +659,84 @@ with st.sidebar:
             st.error(info)
 
 
-
 # ============================================================
-# 1. DASHBOARD UTAMA
+# 1. MENU: DASHBOARD UTAMA
 # ============================================================
 if menu == "Dashboard Utama":
     st.markdown("<h2 style='margin-bottom: 24px; color: #000000;'>Dashboard Monitoring Air</h2>", unsafe_allow_html=True)
 
-    cfg = baca_config()
-    tinggi_bak = cfg.get("tinggi_bak", 72)
     sensor = baca_sensor()
 
-    jarak       = float(sensor.get("jarak", 0.0))       if sensor else 0.0
-    debit       = float(sensor.get("debit", 0.0))       if sensor else 0.0
-    total_liter = float(sensor.get("total_liter", 0.0)) if sensor else 0.0
-    ntu         = ambil_ntu(sensor)
-    waktu_str   = str(sensor.get("waktu", datetime.now().strftime("%H:%M:%S"))) if sensor else "—"
+    # Ekstraksi Data dari Node /bak_mandi/latest
+    distanceCm       = float(sensor.get("distanceCm", 0.0))       if sensor else 0.0
+    levelPersen      = float(sensor.get("levelPersen", 0.0))      if sensor else 0.0
+    pwmMosfet        = int(sensor.get("pwmMosfet", 0))            if sensor else 0
+    statusPompa      = str(sensor.get("statusPompa", "MATI"))     if sensor else "OFFLINE"
+    flowRate         = float(sensor.get("flowRate", 0.0))         if sensor else 0.0
+    totalLiter       = float(sensor.get("totalLiter", 0.0))       if sensor else 0.0
+    turbidityVolt    = float(sensor.get("turbidityVolt", 3.0))    if sensor else 3.0
+    turbidityRaw     = int(sensor.get("turbidityRaw", 0))         if sensor else 0
+    timestamp_str    = str(sensor.get("timestamp", "—"))          if sensor else "—"
 
-    water_level = hitung_level(sensor, tinggi_bak)
+    # Evaluasi Mutu Air & Badge (Kekeruhan murni informasi kualitas)
+    mutu_air, warna_mutu = evaluasi_kualitas_air(turbidityVolt)
+    badge_pompa = get_badge_pompa(statusPompa)
 
-    fuzzy_res = evaluasi_fuzzy_mamdani(water_level, ntu)
-    if sensor:
-        cek_notifikasi(fuzzy_res, water_level, ntu)
+    # Cek notifikasi otomatis Telegram
+    cek_notifikasi_otomatis(sensor)
 
-    pwm_color = "#2e7d32" if fuzzy_res["pompa_aktif"] else "#546e7a"
-    pwm_text = "PWM " + str(fuzzy_res["pwm"]) if fuzzy_res["pompa_aktif"] else "MATI"
+    duty_percent = int((pwmMosfet / 255.0) * 100)
+    tegangan_motor = round((pwmMosfet / 255.0) * 12.0, 1)
+    pwm_color = "#2e7d32" if pwmMosfet > 0 else "#546e7a"
+    pwm_text = f"PWM {pwmMosfet}" if pwmMosfet > 0 else "MATI (0)"
 
+    # Format status kecepatan tanpa persenan
+    status_kecepatan = statusPompa.replace(" 80%", "").replace("80%", "").replace("(100%)", "").replace("%", "").strip()
+    if not status_kecepatan:
+        status_kecepatan = "PENUH" if "PENUH" in statusPompa.upper() else "MATI"
+
+    # BARIS 1: 4 KARTU METRIK LENGKAP
     st.markdown(f"""
         <div class='metric-grid'>
             <div class='metric-card'>
                 <div class='metric-title'>Status PWM</div>
                 <div class='metric-value' style='color: {pwm_color};'>{pwm_text}</div>
-                <div class='metric-sub'>Duty: <b>{fuzzy_res["duty"]}%</b> ({fuzzy_res["tegangan_volt"]:.1f}V DC)</div>
+                <div class='metric-sub'>Duty: <b>{duty_percent}%</b> ({tegangan_motor:.1f}V DC)</div>
             </div>
             <div class='metric-card'>
                 <div class='metric-title'>Status Kecepatan</div>
-                <div class='metric-value' style='color: {fuzzy_res["badge_color"]};'>{fuzzy_res["kecepatan_label"]}</div>
-                <div class='metric-sub'>Mode: <b>Otonom Cerdas</b> (ESP32)</div>
+                <div class='metric-value' style='color: {badge_pompa};'>{status_kecepatan}</div>
+                <div class='metric-sub'>&nbsp;</div>
             </div>
             <div class='metric-card'>
                 <div class='metric-title'>Kualitas Air</div>
-                <div class='metric-value' style='color: {fuzzy_res["warna_mutu"]};'>{ntu:.1f} <span style='font-size: 14px;'>NTU</span></div>
-                <div class='metric-sub'>Status: <b>{fuzzy_res["mutu_air"]}</b></div>
+                <div class='metric-value' style='color: {warna_mutu};'>{turbidityVolt:.2f} <span style='font-size: 14px;'>Volt</span></div>
+                <div class='metric-sub'>Kondisi: <b>{mutu_air}</b> (ADC: {turbidityRaw})</div>
             </div>
             <div class='metric-card'>
                 <div class='metric-title'>Debit Air Masuk</div>
-                <div class='metric-value'>{debit:.1f} <span style='font-size: 14px;'>L/min</span></div>
+                <div class='metric-value'>{flowRate:.1f} <span style='font-size: 14px;'>L/min</span></div>
                 <div class='metric-sub'>Sensor YF-S201</div>
-            </div>
-            <div class='metric-card'>
-                <div class='metric-title'>Total Air Terpakai</div>
-                <div class='metric-value'>{total_liter:.1f} <span style='font-size: 14px;'>Liter</span></div>
-                <div class='metric-sub'>Akumulasi Pengisian</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
+    # BARIS 2: KARTU VISUALISASI LEVEL BAK AIR
+    water_display = int(round(levelPersen))
     st.markdown(f"""
         <div class='tank-container'>
-            <h3 style='margin: 0 0 8px 0; font-size: 1.25rem; color: #000000;'>Ketinggian Bak Mandi</h3>
+            <h3 style='margin: 0 0 8px 0; font-size: 1.25rem; color: #000000;'>Status Ketinggian Air</h3>
             <div class='tank-percentage'>
-                {water_level}%
+                {water_display}%
             </div>
             <div style='background: #e1f5fe; border-radius: 12px; height: 16px; width: 100%; overflow: hidden; margin: 12px 0;'>
-                <div style='background: linear-gradient(90deg, #42a5f5, #1976d2); width: {water_level}%; height: 100%; transition: width 0.5s ease;'></div>
+                <div style='background: linear-gradient(90deg, #42a5f5, #1976d2); width: {min(100, max(0, water_display))}%; height: 100%; transition: width 0.5s ease;'></div>
             </div>
             <p style='margin: 6px 0; font-size: 13.5px; color: #000000;'>
-                Jarak Permukaan ke Sensor: <b>{jarak:.1f} cm</b> (Tinggi Bak Acuan: {tinggi_bak} cm)
+                Jarak Permukaan ke Sensor: <b>{distanceCm:.1f} cm</b>
             </p>
             <p style='margin: 4px 0 0 0; font-size: 11px; color: #546E7A; font-style: italic;'>
-                Diperbarui dari ESP32: {waktu_str}
+                Diperbarui dari ESP32: {timestamp_str}
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -807,48 +747,7 @@ if menu == "Dashboard Utama":
 
 
 # ============================================================
-# 2. GRAFIK & HISTORIS
-# ============================================================
-elif menu == "Grafik dan Historis":
-    if st.button("← Kembali ke Dashboard Utama", key="btn_back_p1"):
-        st.session_state.nav_menu = "Dashboard Utama"
-        st.rerun()
-
-    st.markdown("<h2 style='color: #000000;'>Grafik dan Historis</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#000000; font-size: 14px;'>Visualisasi tren ketinggian air, fluktuasi kekeruhan (NTU), dan debit aliran air secara berkala.</p>", unsafe_allow_html=True)
-
-    logs = baca_logs()
-
-    if logs:
-        df_logs = pd.DataFrame(logs)
-        st.subheader("Historis")
-
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            st.markdown("### Tren Level Air (%)")
-            chart_data_level = df_logs[["waktu", "status"]].copy().head(30)
-            st.caption("Data pemantauan status ketinggian air terbaru.")
-            st.dataframe(chart_data_level, use_container_width=True)
-
-        with col_g2:
-            st.markdown("### Riwayat Sensor")
-            st.caption("Pencatatan sinkronisasi data telemetri ke Firebase Database.")
-            st.dataframe(df_logs[["waktu", "aktivitas"]].head(30), use_container_width=True)
-    else:
-        st.info("💡 Belum ada riwayat telemetri yang tercatat di Firebase logs.")
-
-    st.write("---")
-    st.markdown("### Simulasi respon terhadap kekeruhan")
-    sim_data = pd.DataFrame({
-        "Kekeruhan (NTU)": [5, 15, 25, 40, 70, 95, 110, 150],
-        "Tingkat Keamanan": [100, 95, 90, 75, 60, 45, 0, 0],
-        "Rekomendasi": ["Air Bersih", "Air Bersih", "Air Bersih", "Waspada", "Agak Keruh", "Batas Kritis", "Stop Pompa", "Stop Pompa"]
-    })
-    st.line_chart(sim_data.set_index("Kekeruhan (NTU)")["Tingkat Keamanan"])
-
-
-# ============================================================
-# 3. RIWAYAT & NOTIFIKASI
+# 2. MENU: RIWAYAT & NOTIFIKASI
 # ============================================================
 elif menu == "Riwayat & Notifikasi":
     if st.button("← Kembali ke Dashboard Utama", key="btn_back_p2"):
@@ -856,29 +755,63 @@ elif menu == "Riwayat & Notifikasi":
         st.rerun()
 
     st.markdown("<h2 style='color: #000000;'>Riwayat Aktivitas & Log Notifikasi</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#000000; font-size: 14px;'>Catatan peristiwa otomatis pengisian air, peringatan Telegram, dan status bak mandi.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#000000; font-size: 14px;'>Catatan telemetri berkala pengisian air, status kecepatan pompa, dan kondisi bak mandi dari node <code>/bak_mandi/history</code>.</p>", unsafe_allow_html=True)
 
-    logs = baca_logs()
-    if logs:
-        df = pd.DataFrame(logs)
+    hist_data = baca_history(limit=250)
+    if hist_data:
+        cleaned_rows = []
+        for r in hist_data:
+            ts = str(r.get("timestamp", r.get("id_log", "-")))
 
-        kolom_tersedia = [c for c in ["waktu", "aktivitas", "status"] if c in df.columns]
-        df_tampil = df[kolom_tersedia].copy()
-        df_tampil.rename(columns={
-            "waktu": "Waktu Transmisi",
-            "aktivitas": "Rincian Aktivitas",
-            "status": "Status Bak"
-        }, inplace=True)
+            # Mendukung nama field 'statusPompa' maupun 'status' dari ESP32
+            status_raw = str(r.get("statusPompa") or r.get("status") or "-")
+            status_clean = status_raw.replace(" 80%", "").replace("80%", "").replace("(100%)", "").replace("%", "").strip()
 
-        if "Status Bak" in df_tampil.columns:
-            status_unik = ["Semua"] + list(df_tampil["Status Bak"].dropna().unique())
-            pilihan_filter = st.selectbox("Filter berdasarkan status:", status_unik)
+            level = r.get("levelPersen")
+            level_str = f"{float(level):.1f}%" if level is not None and float(level) >= 0 else "-"
+
+            dist = r.get("distanceCm")
+            dist_str = f"{float(dist):.1f} cm" if dist is not None and float(dist) >= 0 else "-"
+
+            volt = r.get("turbidityVolt")
+            if volt is not None:
+                mutu, _ = evaluasi_kualitas_air(volt)
+                volt_str = f"{float(volt):.2f} V ({mutu})"
+            else:
+                volt_str = "-"
+
+            flow = r.get("flowRate")
+            flow_str = f"{float(flow):.1f} L/m" if flow is not None else "-"
+
+            total = r.get("totalLiter")
+            total_str = f"{float(total):.1f} L" if total is not None else "-"
+
+            pwm = r.get("pwmMosfet")
+            pwm_str = str(int(pwm)) if pwm is not None else "-"
+
+            cleaned_rows.append({
+                "Waktu Transmisi": ts,
+                "Status Pompa": status_clean,
+                "Level Air": level_str,
+                "Jarak Sensor": dist_str,
+                "Kualitas Air": volt_str,
+                "Debit Aliran": flow_str,
+                "Total Volume": total_str,
+                "PWM Pompa": pwm_str
+            })
+
+        df_tampil = pd.DataFrame(cleaned_rows)
+
+        # Fitur Filter Status Pompa
+        if "Status Pompa" in df_tampil.columns:
+            status_unik = ["Semua"] + [s for s in df_tampil["Status Pompa"].dropna().unique() if s != "-"]
+            pilihan_filter = st.selectbox("Filter berdasarkan status pompa:", status_unik)
             if pilihan_filter != "Semua":
-                df_tampil = df_tampil[df_tampil["Status Bak"] == pilihan_filter]
+                df_tampil = df_tampil[df_tampil["Status Pompa"] == pilihan_filter]
 
-        st.dataframe(df_tampil, use_container_width=True, height=450)
+        st.dataframe(df_tampil, use_container_width=True, height=480)
     else:
-        st.info("Belum ada riwayat aktivitas yang tersimpan di Firebase.")
+        st.info("Belum ada data riwayat yang tersimpan di node /bak_mandi/history Firebase.")
 
     if st.button("🔄 Segarkan Data Log"):
         st.rerun()
@@ -886,9 +819,8 @@ elif menu == "Riwayat & Notifikasi":
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  SISTEM MONITORING AIR IoT - ALL IN ONE SCRIPT")
+    print("  SISTEM MONITORING AIR IoT - STREAMLIT DASHBOARD")
+    print("  Terkoneksi ke node: /bak_mandi/latest & /bak_mandi/history")
     print("=" * 60)
-    print(generate_all_figma_svgs())
-    print("\nUntuk menjalankan Web Dashboard Streamlit:")
-    print("  streamlit run app.py")
+    print("Jalankan web dengan perintah: streamlit run app.py")
     print("=" * 60)
